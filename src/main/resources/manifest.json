@@ -1,0 +1,25 @@
+{
+    "Group": "MartelStudios",
+    "Name": "OpenNavigation",
+    "Version": "0.1.0",
+    "Description": "Routed navigation for Hytale interfaces: a history of where the player is, and how to go back",
+    "Authors": [
+        {
+            "Name": "Hazard4U"
+        }
+    ],
+    "Website": "https://github.com/MartelStudios/OpenNavigation",
+    "ServerVersion": "^0.6.2",
+    "Dependencies": {
+        "Hytale:AssetModule": "*"
+    },
+    "OptionalDependencies": {
+        
+    },
+    "DisabledByDefault": false,
+    "Main": "com.martelstudios.opennavigation.OpenNavigationPlugin",
+    "IncludesAssetPack": true,
+    "UpdateChecker": {
+        "CurseForge": ""
+    }
+}

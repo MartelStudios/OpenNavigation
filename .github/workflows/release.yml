@@ -1,0 +1,65 @@
+name: Release
+
+# Run this from the Actions tab: it writes the version down, commits, tags and publishes.
+# There is no tag trigger on purpose — the push below is made with a token that does start
+# workflows, so a tag pushed here would fire a second, duplicate run.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, without the leading v — 1.0.0'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      # An app installed on the repository is an actor the ruleset can name, which GITHUB_TOKEN
+      # is not — and the version commit lands on main, so it needs that exception.
+      - name: Mint a token for the release app
+        id: app-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.RELEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Write the version down
+        run: sed -i "s/^version = .*/version = ${{ inputs.version }}/" gradle.properties
+
+      # Regenerates manifest.json from the property, so the tag carries a coherent tree
+      - name: Build
+        run: ./gradlew build -Pversion=${{ inputs.version }}
+
+      - name: Commit and tag
+        run: |
+          git config user.name "${{ steps.app-token.outputs.app-slug }}[bot]"
+          git config user.email "${{ steps.app-token.outputs.installation-id }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          git commit -am "chore: release ${{ inputs.version }}"
+          git tag "v${{ inputs.version }}"
+          git push origin HEAD "v${{ inputs.version }}"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          files: build/libs/*.jar
+          generate_release_notes: true
+          fail_on_unmatched_files: true
