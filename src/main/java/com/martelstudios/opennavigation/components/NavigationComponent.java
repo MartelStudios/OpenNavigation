@@ -55,8 +55,9 @@ public class NavigationComponent implements Component<EntityStore> {
     }
 
     /**
-     * @return {@code true} once the player stands somewhere, which is what tells a first visit from
-     * a return.
+     * @return {@code true} once the player has gone anywhere this session. Nothing ever clears this
+     * — an interface opening afresh roots a new history over the old one — so it says nothing about
+     * whether a page is open.
      */
     public boolean hasRoute() {
         return route != null;
