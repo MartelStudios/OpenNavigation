@@ -13,8 +13,17 @@ import javax.annotation.Nullable;
 public interface Route {
 
     /**
-     * @return the name identifying this route. Two routes of the same kind sharing a name are the
-     * same place, which is what going back to one is written against.
+     * @return who this route belongs to, one mod's own word. Two mods are free to both call a route
+     * "journal" without those being the same place, and it is the key a mod subscribes on to hear
+     * about its own routes and no one else's.
+     */
+    @Nonnull
+    String getNamespace();
+
+    /**
+     * @return the name identifying this route inside its namespace. Two routes of the same kind
+     * sharing a namespace and a name are the same place, which is what going back to one is written
+     * against — so a route standing for one thing among many carries which one in its name.
      */
     @Nonnull
     String getName();

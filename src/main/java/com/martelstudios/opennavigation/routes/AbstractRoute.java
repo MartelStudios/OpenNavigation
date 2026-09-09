@@ -10,6 +10,8 @@ import javax.annotation.Nullable;
  */
 public abstract class AbstractRoute implements Route {
 
+    private final String namespace;
+
     private final String name;
 
     @Nullable
@@ -22,8 +24,15 @@ public abstract class AbstractRoute implements Route {
 
     private int depth;
 
-    protected AbstractRoute(@Nonnull String name) {
+    protected AbstractRoute(@Nonnull String namespace, @Nonnull String name) {
+        this.namespace = namespace;
         this.name = name;
+    }
+
+    @Nonnull
+    @Override
+    public String getNamespace() {
+        return namespace;
     }
 
     @Nonnull
@@ -109,24 +118,26 @@ public abstract class AbstractRoute implements Route {
     }
 
     /**
-     * A name identifies a place, so two routes of the same kind carrying the same name are the same
-     * place — whatever else they were built with. Coming back to a route is written against this.
+     * A namespace and a name identify a place, so two routes of the same kind carrying both are the
+     * same place — whatever else they were built with. Coming back to a route is written against
+     * this, and the namespace is what keeps one mod's history from answering for another's.
      */
     @Override
     public boolean equals(Object other) {
         if (this == other) return true;
         if (other == null || getClass() != other.getClass()) return false;
 
-        return name.equals(((AbstractRoute) other).name);
+        AbstractRoute route = (AbstractRoute) other;
+        return namespace.equals(route.namespace) && name.equals(route.name);
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return 31 * namespace.hashCode() + name.hashCode();
     }
 
     @Override
     public String toString() {
-        return name;
+        return namespace + ":" + name;
     }
 }

@@ -14,9 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TabRouteTest {
 
-    private final Route active = new StackRoute("active");
-    private final Route finished = new StackRoute("finished");
-    private final TabRoute journal = new TabRoute("journal", List.of(active, finished), active);
+    private static final String NS = "test";
+
+    private final Route active = new StackRoute(NS, "active");
+    private final Route finished = new StackRoute(NS, "finished");
+    private final TabRoute journal = new TabRoute(NS, "journal", List.of(active, finished), active);
 
     @Nested
     @DisplayName("the open tab")
@@ -43,7 +45,7 @@ class TabRouteTest {
 
         @Test
         void changes_which_one_shows() {
-            journal.setActiveTab(new StackRoute("finished"));
+            journal.setActiveTab(new StackRoute(NS, "finished"));
 
             assertSame(finished, journal.getActiveTab());
             assertTrue(finished.isActive());
@@ -53,14 +55,14 @@ class TabRouteTest {
         @Test
         @DisplayName("is named, not handed in: the caller need not hold the instance")
         void resolves_a_tab_by_name() {
-            assertSame(finished, journal.setActiveTab(new StackRoute("finished")));
+            assertSame(finished, journal.setActiveTab(new StackRoute(NS, "finished")));
         }
 
         @Test
         void refuses_a_tab_the_group_does_not_have() {
-            assertThrows(IllegalArgumentException.class, () -> journal.setActiveTab(new StackRoute("nowhere")));
-            assertFalse(journal.trySetActiveTab(new StackRoute("nowhere")));
-            assertTrue(journal.trySetActiveTab(new StackRoute("finished")));
+            assertThrows(IllegalArgumentException.class, () -> journal.setActiveTab(new StackRoute(NS, "nowhere")));
+            assertFalse(journal.trySetActiveTab(new StackRoute(NS, "nowhere")));
+            assertTrue(journal.trySetActiveTab(new StackRoute(NS, "finished")));
         }
     }
 
@@ -68,7 +70,7 @@ class TabRouteTest {
     @DisplayName("in a history")
     class InAHistory {
 
-        private final Route home = new StackRoute("home");
+        private final Route home = new StackRoute(NS, "home");
 
         @Test
         void numbers_its_tabs_below_itself() {
@@ -84,7 +86,7 @@ class TabRouteTest {
         void pushes_into_the_open_tab() {
             home.push(journal);
 
-            Route detail = new StackRoute("detail");
+            Route detail = new StackRoute(NS, "detail");
             assertEquals(detail, journal.push(detail));
             assertSame(active, detail.getPrevious());
             assertEquals(detail, home.getTip());
@@ -103,10 +105,10 @@ class TabRouteTest {
         @DisplayName("opens the tab the caller asked for when navigated back to")
         void navigating_back_reopens_a_tab() {
             home.push(journal);
-            Route detail = new StackRoute("detail");
+            Route detail = new StackRoute(NS, "detail");
             Route tip = journal.push(detail);
 
-            TabRoute asked = new TabRoute("journal", List.of(new StackRoute("active"), new StackRoute("finished")), new StackRoute("finished"));
+            TabRoute asked = new TabRoute(NS, "journal", List.of(new StackRoute(NS, "active"), new StackRoute(NS, "finished")), new StackRoute(NS, "finished"));
 
             assertEquals(finished, tip.navigate(asked));
             assertSame(finished, journal.getActiveTab());
@@ -116,7 +118,7 @@ class TabRouteTest {
     @Test
     @DisplayName("refuses to be given a next: opening a tab is the only way through it")
     void refuses_set_next() {
-        assertThrows(UnsupportedOperationException.class, () -> journal.setNext(new StackRoute("detail")));
+        assertThrows(UnsupportedOperationException.class, () -> journal.setNext(new StackRoute(NS, "detail")));
     }
 
     @Test

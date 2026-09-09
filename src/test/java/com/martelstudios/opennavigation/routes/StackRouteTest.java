@@ -11,9 +11,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StackRouteTest {
 
-    private final Route home = new StackRoute("home");
-    private final Route list = new StackRoute("list");
-    private final Route detail = new StackRoute("detail");
+    private static final String NS = "test";
+
+    private final Route home = new StackRoute(NS, "home");
+    private final Route list = new StackRoute(NS, "list");
+    private final Route detail = new StackRoute(NS, "detail");
 
     @Nested
     @DisplayName("push")
@@ -46,7 +48,7 @@ class StackRouteTest {
         void drops_the_branch_not_taken() {
             home.push(list).push(detail);
 
-            Route other = new StackRoute("other");
+            Route other = new StackRoute(NS, "other");
             home.push(other);
 
             assertSame(other, home.getNext());
@@ -94,7 +96,7 @@ class StackRouteTest {
         void ignores_a_route_that_is_not_there() {
             Route tip = home.push(list);
 
-            assertEquals(list, tip.pop(new StackRoute("nowhere")));
+            assertEquals(list, tip.pop(new StackRoute(NS, "nowhere")));
             assertSame(list, home.getNext());
         }
     }
@@ -108,7 +110,7 @@ class StackRouteTest {
         void returns_to_a_known_route() {
             Route tip = home.push(list).push(detail);
 
-            assertEquals(list, tip.navigate(new StackRoute("list")));
+            assertEquals(list, tip.navigate(new StackRoute(NS, "list")));
             assertNull(list.getNext());
         }
 
@@ -116,7 +118,7 @@ class StackRouteTest {
         @DisplayName("pushes a route nobody has visited onto the tip")
         void pushes_an_unknown_route() {
             Route tip = home.push(list);
-            Route unknown = new StackRoute("unknown");
+            Route unknown = new StackRoute(NS, "unknown");
 
             assertEquals(unknown, tip.navigate(unknown));
             assertEquals(2, unknown.getDepth());
@@ -145,8 +147,8 @@ class StackRouteTest {
         void search_walks_back() {
             Route tip = home.push(list).push(detail);
 
-            assertSame(home, tip.search(new StackRoute("home")));
-            assertNull(home.search(new StackRoute("detail")));
+            assertSame(home, tip.search(new StackRoute(NS, "home")));
+            assertNull(home.search(new StackRoute(NS, "detail")));
         }
 
         @Test
@@ -174,15 +176,37 @@ class StackRouteTest {
         @Test
         @DisplayName("is the name, so a route rebuilt names the same place")
         void equals_by_name() {
-            assertEquals(new StackRoute("home"), home);
+            assertEquals(new StackRoute(NS, "home"), home);
         }
 
         @Test
         @DisplayName("is not shared across kinds of route")
         void differs_by_kind() {
-            TabRoute tabs = new TabRoute("home", java.util.List.of(new StackRoute("a")), new StackRoute("a"));
+            TabRoute tabs = new TabRoute(NS, "home", java.util.List.of(new StackRoute(NS, "a")), new StackRoute(NS, "a"));
 
             org.junit.jupiter.api.Assertions.assertNotEquals(home, tabs);
+        }
+
+        @Test
+        @DisplayName("is not shared across mods: the same name in two namespaces is two places")
+        void differs_by_namespace() {
+            org.junit.jupiter.api.Assertions.assertNotEquals(new StackRoute("other", "home"), home);
+        }
+
+        @Test
+        @DisplayName("keeps a foreign route out of the history it is not part of")
+        void search_ignores_another_namespace() {
+            Route tip = home.push(list);
+
+            assertNull(tip.search(new StackRoute("other", "home")));
+        }
+
+        @Test
+        @DisplayName("reads as the namespace, the name, and what follows")
+        void reads_as_a_chain() {
+            home.push(list);
+
+            assertEquals("test:home => test:list => |||", home.toString());
         }
     }
 }

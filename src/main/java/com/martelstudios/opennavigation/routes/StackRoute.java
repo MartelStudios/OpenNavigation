@@ -8,8 +8,8 @@ import javax.annotation.Nonnull;
  */
 public class StackRoute extends AbstractRoute {
 
-    public StackRoute(@Nonnull String name) {
-        super(name);
+    public StackRoute(@Nonnull String namespace, @Nonnull String name) {
+        super(namespace, name);
     }
 
     /**
@@ -71,6 +71,6 @@ public class StackRoute extends AbstractRoute {
 
     @Override
     public String toString() {
-        return getName() + " => " + (hasNext() ? getNext().toString() : "|||");
+        return super.toString() + " => " + (hasNext() ? getNext().toString() : "|||");
     }
 }

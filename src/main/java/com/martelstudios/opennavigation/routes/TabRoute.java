@@ -20,8 +20,8 @@ public class TabRoute extends AbstractRoute {
 
     private Route activeTab;
 
-    public TabRoute(@Nonnull String name, @Nonnull Collection<Route> tabs, @Nonnull Route activeTab) {
-        super(name);
+    public TabRoute(@Nonnull String namespace, @Nonnull String name, @Nonnull Collection<Route> tabs, @Nonnull Route activeTab) {
+        super(namespace, name);
 
         for (Route tab : tabs) {
             this.tabs.put(tab.getName(), tab);
@@ -132,7 +132,7 @@ public class TabRoute extends AbstractRoute {
     public Route setActiveTab(@Nonnull Route tab) {
         Route opened = tabs.get(tab.getName());
         if (opened == null) {
-            throw new IllegalArgumentException(getName() + " has no tab named " + tab.getName());
+            throw new IllegalArgumentException(this + " has no tab named " + tab.getName());
         }
 
         if (activeTab != null) activeTab.setSelfActive(false);
@@ -167,7 +167,7 @@ public class TabRoute extends AbstractRoute {
 
         for (Route tab : tabs.values()) {
             builder.append('\n')
-                   .append('[').append(getName()).append(']')
+                   .append('[').append(super.toString()).append(']')
                    .append(tab == activeTab ? '<' : '(')
                    .append(tab.getName())
                    .append(tab == activeTab ? '>' : ')')
