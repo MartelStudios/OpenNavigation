@@ -21,6 +21,10 @@ Early. The project is scaffolded and the model is being ported.
 The jar lands in `build/libs/`. `./gradlew runServer` starts a dev server with the mod staged into
 it — one plugin, so there is no workspace to run several of them.
 
+`./gradlew test` runs the route model's tests, and `build` runs them too, so a broken history is a
+broken build. The model is plain Java with no server behind it, which is what makes it worth
+testing: push, pop and navigate are the whole product.
+
 ## Releasing
 
 The **Release** workflow, run from the Actions tab, writes the version into `gradle.properties`,
