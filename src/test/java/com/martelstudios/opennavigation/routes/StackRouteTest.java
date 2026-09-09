@@ -170,6 +170,57 @@ class StackRouteTest {
     }
 
     @Nested
+    @DisplayName("context")
+    class Context {
+
+        @Test
+        void is_handed_back_as_it_was_given() {
+            home.setContext("a quest");
+
+            assertEquals("a quest", home.getContext());
+        }
+
+        @Test
+        void is_null_until_something_is_put_there() {
+            assertNull(home.getContext());
+        }
+
+        @Test
+        @DisplayName("comes back typed when it matches, null when it does not")
+        void is_read_by_type() {
+            home.setContext("a quest");
+
+            assertEquals("a quest", home.getContext(String.class));
+            assertNull(home.getContext(Integer.class));
+        }
+
+        @Test
+        void reading_a_type_from_nothing_is_null() {
+            assertNull(home.getContext(String.class));
+        }
+
+        @Test
+        @DisplayName("says nothing about which place the route is")
+        void does_not_change_identity() {
+            home.setContext("a quest");
+            Route same = new StackRoute(NS, "home");
+            same.setContext("another quest");
+
+            assertEquals(same, home);
+        }
+
+        @Test
+        @DisplayName("does not make a route findable that the history does not hold")
+        void does_not_affect_search() {
+            Route tip = home.push(list);
+            Route looked = new StackRoute(NS, "home");
+            looked.setContext("something else");
+
+            assertSame(home, tip.search(looked));
+        }
+    }
+
+    @Nested
     @DisplayName("identity")
     class Identity {
 

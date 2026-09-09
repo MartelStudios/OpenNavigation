@@ -22,6 +22,13 @@ public abstract class AbstractRoute implements Route {
 
     private boolean selfActive = true;
 
+    /**
+     * Untyped on purpose: what a route carries is the business of whoever put it there and whoever
+     * draws it, and this project has no opinion on either.
+     */
+    @Nullable
+    private Object context;
+
     private int depth;
 
     protected AbstractRoute(@Nonnull String namespace, @Nonnull String name) {
@@ -67,6 +74,23 @@ public abstract class AbstractRoute implements Route {
     @Override
     public void setNext(@Nullable Route next) {
         this.next = next;
+    }
+
+    @Nullable
+    @Override
+    public Object getContext() {
+        return context;
+    }
+
+    @Override
+    public void setContext(@Nullable Object context) {
+        this.context = context;
+    }
+
+    @Nullable
+    @Override
+    public <T> T getContext(@Nonnull Class<T> type) {
+        return type.isInstance(context) ? type.cast(context) : null;
     }
 
     @Override

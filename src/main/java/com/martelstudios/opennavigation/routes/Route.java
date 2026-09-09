@@ -43,6 +43,24 @@ public interface Route {
     void setNext(@Nullable Route next);
 
     /**
+     * @return whatever the route was given to carry — the quest it stands for, the page it opens on
+     * — for whoever draws it to cast back. Never part of what the route <em>is</em>: a route naming
+     * one thing among many says which in its {@link #getName() name}, or two of them are the same
+     * place and going back to one lands on the other.
+     */
+    @Nullable
+    Object getContext();
+
+    void setContext(@Nullable Object context);
+
+    /**
+     * @return the context when it is of the given type, {@code null} otherwise. What a renderer
+     * asking for its own type wants, without the cast it would have to guard anyway.
+     */
+    @Nullable
+    <T> T getContext(@Nonnull Class<T> type);
+
+    /**
      * @return whether this route is showing on its own account, ignoring what it hangs from.
      */
     boolean isSelfActive();
