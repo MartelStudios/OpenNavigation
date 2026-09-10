@@ -18,7 +18,7 @@
     },
     "DisabledByDefault": false,
     "Main": "com.martelstudios.opennavigation.OpenNavigationPlugin",
-    "IncludesAssetPack": true,
+    "IncludesAssetPack": false,
     "UpdateChecker": {
         "CurseForge": ""
     }
