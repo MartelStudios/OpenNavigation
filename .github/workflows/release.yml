@@ -63,3 +63,81 @@ jobs:
           files: build/libs/*.jar
           generate_release_notes: true
           fail_on_unmatched_files: true
+
+      # Handed to the CurseForge job rather than rebuilt there: what is published has to be the very
+      # same file the release carries, not one built again from the same sources.
+      - name: Keep the artefact for CurseForge
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: build/libs/*.jar
+          if-no-files-found: error
+
+  # A job of its own rather than a step of the release: it runs as soon as the release job succeeds,
+  # so both land together, but a refusal from CurseForge leaves a complete GitHub release behind and
+  # a job to re-run instead of a half-published version.
+  curseforge:
+    needs: release
+    runs-on: ubuntu-latest
+
+    env:
+      NAME: OpenNavigation
+      PROJECT_ID: '1692713'
+
+    steps:
+      - name: Fetch the artefact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+
+      - name: Upload to CurseForge
+        env:
+          TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
+          GAME_VERSION: ${{ vars.CURSEFORGE_GAME_VERSION }}
+          VERSION: ${{ inputs.version }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "$TOKEN" ]]; then
+            echo "::error::CURSEFORGE_TOKEN is not set."
+            exit 1
+          fi
+
+          if [[ -z "$GAME_VERSION" ]]; then
+            echo "::error::Set the CURSEFORGE_GAME_VERSION variable to the Hytale version id this release targets."
+            exit 1
+          fi
+
+          # Matched by name, so it does not matter how the download laid the tree out
+          FILE=$(find . -type f -name "$NAME-*.jar" -print -quit)
+
+          if [[ -z "$FILE" ]]; then
+            echo "::error::No artefact matching $NAME-*.jar"
+            find . -type f -name '*.jar' -print
+            exit 1
+          fi
+
+          jq -n --arg changelog "Released as [v$VERSION]($RELEASE_URL)." \
+                --arg displayName "$NAME $VERSION" \
+                --argjson versions "[$GAME_VERSION]" \
+                '{changelog: $changelog, changelogType: "markdown", displayName: $displayName, releaseType: "release", gameVersions: $versions}' \
+            > metadata.json
+
+          echo "Uploading $FILE to project $PROJECT_ID"
+          cat metadata.json
+
+          # A project is addressed by id on www, the host CurseForge documents for the auto-packager.
+          # There is no per-game subdomain to pick: Hytale is not on the old Curse network.
+          STATUS=$(curl -sS -o response.json -w '%{http_code}' -X POST \
+            "https://www.curseforge.com/api/projects/$PROJECT_ID/upload-file" \
+            -H "X-Api-Token: $TOKEN" \
+            -F "metadata=<metadata.json" \
+            -F "file=@$FILE")
+
+          cat response.json
+
+          if [[ "$STATUS" -lt 200 || "$STATUS" -ge 300 ]]; then
+            echo "::error::CurseForge refused $NAME (HTTP $STATUS)"
+            exit 1
+          fi

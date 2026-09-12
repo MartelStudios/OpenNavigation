@@ -98,9 +98,12 @@ plugin looks like.
 ## Releasing
 
 The **Release** workflow, run from the Actions tab, writes the version into `gradle.properties`, tags
-it and publishes the jar. It needs the `RELEASE_APP_ID` and `RELEASE_APP_PRIVATE_KEY` secrets.
-Publishing to CurseForge is not wired yet — that comes with the first release, once the project has
-an id there.
+it and publishes the jar, then hands that same file to CurseForge — the one the release carries,
+never one built again from the same sources.
+
+It needs the `RELEASE_APP_ID`, `RELEASE_APP_PRIVATE_KEY` and `CURSEFORGE_TOKEN` secrets, and the
+`CURSEFORGE_GAME_VERSION` variable holding the Hytale version id this release targets. The job fails
+early and says so when either is missing, rather than uploading against the wrong version.
 
 The CurseForge description lives in [docs/curseforge/opennavigation.md](docs/curseforge/opennavigation.md).
 
