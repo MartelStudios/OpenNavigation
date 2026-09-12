@@ -1,7 +1,7 @@
 {
     "Group": "MartelStudios",
     "Name": "OpenNavigation",
-    "Version": "0.1.0",
+    "Version": "1.0.0",
     "Description": "Routed navigation for Hytale interfaces: a history of where the player is, and how to go back",
     "Authors": [
         {
