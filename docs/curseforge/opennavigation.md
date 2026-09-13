@@ -4,6 +4,8 @@
 
 A library for mod authors. On its own it shows a player nothing — it is what other mods stand on.
 
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/vtgfpA9nPQ) [![GitHub](https://img.shields.io/badge/GitHub-Source-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/MartelStudios/OpenNavigation)
+
 ***
 
 ## 🤔 The problem it solves
