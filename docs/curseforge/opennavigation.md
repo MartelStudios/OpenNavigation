@@ -82,7 +82,9 @@ Both are open to extend, so your route can be a class of your own carrying whate
 
 ## 📦 Installing
 
-Drop the jar in `mods/`. Then declare it in your own `manifest.json`:
+**Running a server?** Drop the jar in `mods/` and you are done. Nothing to edit: a mod that needs OpenNavigation already asks for it.
+
+**Writing a mod?** Declare it in the `manifest.json` your own mod ships:
 
 ```json
 "Dependencies": {
