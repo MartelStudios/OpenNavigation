@@ -33,16 +33,25 @@ about — read back with `getContext(Class<T>)`. It is deliberately no part of t
 a route naming one thing among many says which in its **name**, or two of them are the same place
 and going back to one lands on the other.
 
+## Routers
+
+A player holds one history per **router**, and every move names the router it applies to. A router
+is identified like a route, by a namespace and a name: `new RouterId("mymod", "shop")`. So a mod
+rooting its own interface never wipes where the player was in another one, and one interface can
+keep several navigations side by side (two panes of a split screen, say), each with its own way back.
+
 ## Using it
 
 ```java
-NavigationService.get().root(player, new StackRoute("mymod", "shop"));
-NavigationService.get().push(player, new StackRoute("mymod", "shop:item:" + id));
-NavigationService.get().pop(player);
+RouterId shop = new RouterId("mymod", "shop");
+
+NavigationService.get().root(player, shop, new StackRoute("mymod", "shop"));
+NavigationService.get().push(player, shop, new StackRoute("mymod", "shop:item:" + id));
+NavigationService.get().pop(player, shop);
 ```
 
 None of that opens a page. Each move writes the new tip down and dispatches a `RouteChangedEvent`,
-keyed on the route's namespace:
+keyed on the route's namespace and naming the router that moved:
 
 ```java
 plugin.getEventRegistry().register(RouteChangedEvent.class, "mymod", this::draw);
@@ -50,12 +59,17 @@ plugin.getEventRegistry().register(RouteChangedEvent.class, "mymod", this::draw)
 
 So a mod hears about its own routes and no one else's, a route nobody claims reaches
 `registerUnhandled` rather than silently doing nothing, and popping out of your screen into another
-mod's tells *that* mod to draw — which is the only way a shared history could work, since no mod can
-draw another's page.
+mod's tells *that* mod to draw, which is the only way a shared history could work, since no mod can
+draw another's page. A listener drawing several routers reads `getRouter()` to know which to redraw.
 
-`root` is the one move that needs no history behind it; everything else answers `null` when the
-player is nowhere yet. Which is the convention: an interface roots itself when it opens, and the rest
-are moves.
+`root` is the one move that needs no history behind it; everything else answers `null` on a router
+never rooted. Which is the convention: an interface roots itself when it opens, and the rest are
+moves. An interface reopened by a command that should come back where the player left it calls
+`resume` instead, which roots only the first time:
+
+```java
+NavigationService.get().resume(player, shop, () -> new StackRoute("mymod", "shop"));
+```
 
 ### One instance per player
 
@@ -64,9 +78,9 @@ a `static final Route` handed to two players would have the second tear the firs
 
 ### Nothing reaches the disk
 
-`NavigationComponent` is registered without a codec, so a history lives as long as the session. Where
-a player stands is a fact about right now, and handing it back after a restart would drop them behind
-a screen they never opened.
+`NavigationComponent` is registered without a codec, so a player's routers live as long as the
+session. Where a player stands is a fact about right now, and handing it back after a restart would
+drop them behind a screen they never opened.
 
 ## Building
 

@@ -4,28 +4,27 @@ import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.martelstudios.opennavigation.OpenNavigationPlugin;
-import com.martelstudios.opennavigation.routes.Route;
+import com.martelstudios.opennavigation.routers.Router;
+import com.martelstudios.opennavigation.routers.RouterId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * Where one player stands. Registered without a codec, so it lives as long as the session and no
- * longer: a history is what the player did with the interface just now, and handing it back after a
- * restart would drop them behind a screen they never opened.
+ * Every navigation one player holds. Registered without a codec, so it lives as long as the session
+ * and no longer: a history is what the player did with an interface just now, and handing it back
+ * after a restart would drop them behind a screen they never opened.
  */
 public class NavigationComponent implements Component<EntityStore> {
 
-    /**
-     * The tip, not the root: everything else is reachable from it, and it is what has to be drawn.
-     */
-    @Nullable
-    private Route route;
+    private final Map<RouterId, Router> routers = new HashMap<>();
 
     public NavigationComponent() {}
 
     private NavigationComponent(@Nonnull NavigationComponent other) {
-        this.route = other.route;
+        this.routers.putAll(other.routers);
     }
 
     @Override
@@ -38,28 +37,19 @@ public class NavigationComponent implements Component<EntityStore> {
     }
 
     /**
-     * @return where the player stands, or {@code null} before they have gone anywhere.
+     * @return the router of that id, created empty the first time it is asked for.
+     */
+    @Nonnull
+    public Router getRouter(@Nonnull RouterId id) {
+        return routers.computeIfAbsent(id, Router::new);
+    }
+
+    /**
+     * @return the router of that id, or {@code null} when nothing ever moved it. What a read asks,
+     * so looking does not leave an empty router behind.
      */
     @Nullable
-    public Route getRoute() {
-        return route;
-    }
-
-    /**
-     * Records where the player now stands. Kept as the tip whatever is handed in, so a caller
-     * holding a route from the middle of the history cannot leave the player standing behind
-     * themselves.
-     */
-    public void setRoute(@Nullable Route route) {
-        this.route = route == null ? null : route.getTip();
-    }
-
-    /**
-     * @return {@code true} once the player has gone anywhere this session. Nothing ever clears this
-     * — an interface opening afresh roots a new history over the old one — so it says nothing about
-     * whether a page is open.
-     */
-    public boolean hasRoute() {
-        return route != null;
+    public Router findRouter(@Nonnull RouterId id) {
+        return routers.get(id);
     }
 }

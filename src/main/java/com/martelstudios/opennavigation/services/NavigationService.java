@@ -7,20 +7,23 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.martelstudios.opennavigation.OpenNavigationPlugin;
 import com.martelstudios.opennavigation.components.NavigationComponent;
 import com.martelstudios.opennavigation.events.RouteChangedEvent;
+import com.martelstudios.opennavigation.routers.Router;
+import com.martelstudios.opennavigation.routers.RouterId;
 import com.martelstudios.opennavigation.routes.Route;
 import com.martelstudios.opennavigation.routes.TabRoute;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.function.UnaryOperator;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
- * Moves a player through their history. Every move ends the same way: the tip is written down and a
- * {@link RouteChangedEvent} goes out. Nothing here opens a page, and nothing here knows what a route
- * looks like — that belongs to whoever declared the route.
+ * Moves a player through one of their navigations. Every move ends the same way: the router keeps
+ * the new tip and a {@link RouteChangedEvent} goes out. Nothing here opens a page, and nothing here
+ * knows what a route looks like: that belongs to whoever declared the route.
  * <p>
- * Every move but {@link #root} needs the player to be somewhere already, and answers {@code null}
- * when they are not: an interface starts by rooting itself, and everything after that is a move.
+ * Every move names its router, so two interfaces never share a history unless they ask to. Every
+ * move but {@link #root} and {@link #resume} answers {@code null} on a router never rooted.
  */
 public class NavigationService {
 
@@ -29,35 +32,37 @@ public class NavigationService {
     }
 
     /**
-     * Starts a fresh history at the given route, dropping whatever the player had. What an interface
-     * opening from nothing calls — a command, an interaction — since it is the one move that needs
-     * no history behind it.
+     * Starts a fresh history at the given route, dropping whatever that router held. What an
+     * interface opening from nothing calls, since it is the one move that needs no history.
      */
     @Nullable
-    public Route root(@Nonnull PlayerRef player, @Nonnull Route route) {
-        Ref<EntityStore> reference = player.getReference();
-        if (reference == null) return null;
+    public Route root(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Route route) {
+        return move(player, router, current -> current.root(route));
+    }
 
-        route.setPrevious(null);
-        route.setSelfActive(true);
-
-        return enter(player, reference, route);
+    /**
+     * Reopens a router where the player left it, or roots it on the given route the first time.
+     * What an interface reopened by a command calls to come back where the player was.
+     */
+    @Nullable
+    public Route resume(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Supplier<Route> fresh) {
+        return move(player, router, current -> current.hasRoute() ? current.getRoute() : current.root(fresh.get()));
     }
 
     /**
      * Goes one step further in, keeping where the player is underneath.
      */
     @Nullable
-    public Route push(@Nonnull PlayerRef player, @Nonnull Route route) {
-        return move(player, current -> current.push(route));
+    public Route push(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Route route) {
+        return move(player, router, current -> current.push(route));
     }
 
     /**
      * Goes back one step. What a back arrow is bound to. A player standing on the root stays there.
      */
     @Nullable
-    public Route pop(@Nonnull PlayerRef player) {
-        return move(player, Route::pop);
+    public Route pop(@Nonnull PlayerRef player, @Nonnull RouterId router) {
+        return move(player, router, Router::pop);
     }
 
     /**
@@ -65,8 +70,8 @@ public class NavigationService {
      * history does not hold it.
      */
     @Nullable
-    public Route navigate(@Nonnull PlayerRef player, @Nonnull Route route) {
-        return move(player, current -> current.navigate(route));
+    public Route navigate(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Route route) {
+        return move(player, router, current -> current.navigate(route));
     }
 
     /**
@@ -74,8 +79,8 @@ public class NavigationService {
      * should not be able to come back to, such as a form that turned into its own result.
      */
     @Nullable
-    public Route replace(@Nonnull PlayerRef player, @Nonnull Route route) {
-        return move(player, current -> current.pop().push(route));
+    public Route replace(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Route route) {
+        return move(player, router, current -> current.replace(route));
     }
 
     /**
@@ -83,8 +88,8 @@ public class NavigationService {
      * which is how a listener refreshes an interface whose content changed underneath it.
      */
     @Nullable
-    public Route reload(@Nonnull PlayerRef player) {
-        return move(player, UnaryOperator.identity());
+    public Route reload(@Nonnull PlayerRef player, @Nonnull RouterId router) {
+        return move(player, router, Router::getRoute);
     }
 
     /**
@@ -92,73 +97,60 @@ public class NavigationService {
      * already inside it.
      */
     @Nullable
-    public Route setActiveTab(@Nonnull PlayerRef player, @Nonnull TabRoute tabs, @Nonnull Route tab) {
-        return move(player, current -> {
-            Route known = current.search(tabs);
-
-            if (known instanceof TabRoute opened) return opened.setActiveTab(tab);
-
-            tabs.setActiveTab(tab);
-            return current.push(tabs);
-        });
+    public Route setActiveTab(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull TabRoute tabs, @Nonnull Route tab) {
+        return move(player, router, current -> current.setActiveTab(tabs, tab));
     }
 
     /**
-     * @return the matching route in this player's history, or {@code null} when they have never been
+     * @return the matching route in that history, or {@code null} when the player has never been
      * there. Reads only: nobody is moved and nothing is announced.
      */
     @Nullable
-    public Route search(@Nonnull PlayerRef player, @Nonnull Route route) {
-        Route current = getRoute(player);
+    public Route search(@Nonnull PlayerRef player, @Nonnull RouterId router, @Nonnull Route route) {
+        Router found = find(player, router);
 
-        return current == null ? null : current.search(route);
+        return found == null ? null : found.search(route);
     }
 
     /**
-     * @return where the player stands, or {@code null} before they have gone anywhere this session.
+     * @return where the player stands in that navigation, or {@code null} before it was rooted.
      */
     @Nullable
-    public Route getRoute(@Nonnull PlayerRef player) {
+    public Route getRoute(@Nonnull PlayerRef player, @Nonnull RouterId router) {
+        Router found = find(player, router);
+
+        return found == null ? null : found.getRoute();
+    }
+
+    /**
+     * Applies a move to one of the player's routers, then tells whoever draws where it landed. In
+     * that order: a listener asking where the player stands has to be answered the place it is
+     * being handed.
+     */
+    @Nullable
+    private Route move(@Nonnull PlayerRef player, @Nonnull RouterId id, @Nonnull Function<Router, Route> move) {
         Ref<EntityStore> reference = player.getReference();
         if (reference == null) return null;
 
-        return component(reference).getRoute();
-    }
+        Router router = component(reference).getRouter(id);
 
-    /**
-     * Applies a move to where the player stands. Refuses to invent a starting point: a move with no
-     * history behind it is a caller that forgot to {@link #root}.
-     */
-    @Nullable
-    private Route move(@Nonnull PlayerRef player, @Nonnull UnaryOperator<Route> move) {
-        Ref<EntityStore> reference = player.getReference();
-        if (reference == null) return null;
-
-        Route current = component(reference).getRoute();
-        if (current == null) return null;
-
-        return enter(player, reference, move.apply(current));
-    }
-
-    /**
-     * Writes the move down, then tells whoever draws that route. In that order: a listener asking
-     * where the player stands has to be answered the place it is being handed.
-     */
-    @Nonnull
-    private Route enter(@Nonnull PlayerRef player, @Nonnull Ref<EntityStore> reference, @Nonnull Route route) {
-        NavigationComponent component = component(reference);
-
-        Route previous = component.getRoute();
-        Route tip = route.getTip();
-
-        component.setRoute(tip);
+        Route previous = router.getRoute();
+        Route tip = move.apply(router);
+        if (tip == null) return null;
 
         HytaleServer.get()
                     .getEventBus()
                     .dispatchFor(RouteChangedEvent.class, tip.getNamespace())
-                    .dispatch(new RouteChangedEvent(player, reference, tip, previous));
+                    .dispatch(new RouteChangedEvent(player, reference, id, tip, previous));
 
         return tip;
+    }
+
+    @Nullable
+    private static Router find(@Nonnull PlayerRef player, @Nonnull RouterId router) {
+        Ref<EntityStore> reference = player.getReference();
+
+        return reference == null ? null : component(reference).findRouter(router);
     }
 
     @Nonnull
