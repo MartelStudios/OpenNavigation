@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.event.IEvent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.martelstudios.opennavigation.routers.RouterId;
 import com.martelstudios.opennavigation.routes.Route;
 
 import javax.annotation.Nonnull;
@@ -26,14 +27,18 @@ public class RouteChangedEvent implements IEvent<String> {
     private final Ref<EntityStore> reference;
 
     @Nonnull
+    private final RouterId router;
+
+    @Nonnull
     private final Route route;
 
     @Nullable
     private final Route previous;
 
-    public RouteChangedEvent(@Nonnull PlayerRef player, @Nonnull Ref<EntityStore> reference, @Nonnull Route route, @Nullable Route previous) {
+    public RouteChangedEvent(@Nonnull PlayerRef player, @Nonnull Ref<EntityStore> reference, @Nonnull RouterId router, @Nonnull Route route, @Nullable Route previous) {
         this.player = player;
         this.reference = reference;
+        this.router = router;
         this.route = route;
         this.previous = previous;
     }
@@ -53,6 +58,15 @@ public class RouteChangedEvent implements IEvent<String> {
     }
 
     /**
+     * @return the navigation that moved. What an interface drawing several of them at once reads
+     * to know which one to redraw.
+     */
+    @Nonnull
+    public RouterId getRouter() {
+        return router;
+    }
+
+    /**
      * @return where the player now stands — always the tip, never a route in the middle.
      */
     @Nonnull
@@ -61,7 +75,7 @@ public class RouteChangedEvent implements IEvent<String> {
     }
 
     /**
-     * @return where they stood before, or {@code null} on the first move of the session. A listener
+     * @return where this navigation stood before, or {@code null} on its first move. A listener
      * that owns both can tell a move inside its own interface from an arrival into it.
      */
     @Nullable
